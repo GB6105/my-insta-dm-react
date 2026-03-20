@@ -126,10 +126,9 @@ const POLLING_INTERVAL = 30000; // 30초
 - [x] 프로젝트 생성 (`npx create-expo-app`)
 - [x] 보일러플레이트 정리 (탭 제거, 단일 화면 구조 전환)
 - [x] 패키지 설치 (`react-native-webview`, `expo-notifications`)
-- [ ] `WebViewDM.js` 구현
-- [ ] `notifications.js` 구현
-- [ ] `DMScreen.js` 구현
-- [ ] `App.js` 네비게이션 설정
+- [x] `WebViewDM.tsx` 구현 (WebView + URL 차단 + JS 주입 + postMessage)
+- [x] `notifications.ts` 구현 (권한 요청 + 30초 폴링 + 로컬 알림)
+- [x] `app/index.tsx` 구현 (SafeAreaView + AppState + 전체 연결)
 - [ ] iPhone 테스트
 
 ---
