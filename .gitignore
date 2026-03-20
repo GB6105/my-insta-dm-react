@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Claude Code local settings
+.claude/
+.mcp.json
+
+# Shrimp Task Manager
+shrimp_data/
+
+# node_modules (앱 서브디렉토리)
+my-insta-dm/node_modules/
+my-insta-dm/.expo/
+my-insta-dm/dist/
+my-insta-dm/web-build/
+my-insta-dm/expo-env.d.ts
+my-insta-dm/*.tsbuildinfo
+my-insta-dm/app-example/
+my-insta-dm/ios/
+my-insta-dm/android/
+
+# 환경 변수
+.env
+.env*.local
+
+# 인증서/키
+*.pem
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision

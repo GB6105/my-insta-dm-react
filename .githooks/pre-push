@@ -1,0 +1,17 @@
+#!/bin/sh
+# pre-push: Prettier 포맷 검사 안전망 — pre-commit 우회 방지
+
+cd my-insta-dm
+
+echo "🔍 Prettier 포맷 전체 검사 중..."
+npx prettier --check "src/**/*.{ts,tsx}" "app/**/*.{ts,tsx}" "components/**/*.{ts,tsx}" "hooks/**/*.{ts,tsx}" "utils/**/*.{ts,tsx}" 2>/dev/null || \
+npx prettier --check "." --ignore-path .gitignore 2>/dev/null
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ 포맷 오류가 있습니다. 아래 명령어로 수정 후 다시 push하세요:"
+  echo "   cd my-insta-dm && npx prettier --write ."
+  exit 1
+fi
+
+echo "✅ 포맷 검사 통과"
