@@ -13,8 +13,8 @@
 - **프레임워크**: Expo ~54.0 (React Native 0.81)
 - **언어**: TypeScript ~5.9
 - **라우팅**: expo-router ~6.0 (파일 기반 라우팅)
-- **WebView**: react-native-webview (설치 예정)
-- **알림**: expo-notifications (설치 예정)
+- **WebView**: react-native-webview
+- **알림**: expo-notifications
 - **네비게이션**: @react-navigation/native ~7.1
 - **개발 환경**: Windows + VSCode
 - **테스트**: Expo Go (iPhone)
@@ -125,7 +125,7 @@ const POLLING_INTERVAL = 30000; // 30초
 - [x] PRD 작성
 - [x] 프로젝트 생성 (`npx create-expo-app`)
 - [x] 보일러플레이트 정리 (탭 제거, 단일 화면 구조 전환)
-- [ ] 패키지 설치
+- [x] 패키지 설치 (`react-native-webview`, `expo-notifications`)
 - [ ] `WebViewDM.js` 구현
 - [ ] `notifications.js` 구현
 - [ ] `DMScreen.js` 구현
