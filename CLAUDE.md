@@ -124,6 +124,7 @@ const POLLING_INTERVAL = 30000; // 30초
 
 - [x] PRD 작성
 - [x] 프로젝트 생성 (`npx create-expo-app`)
+- [x] 보일러플레이트 정리 (탭 제거, 단일 화면 구조 전환)
 - [ ] 패키지 설치
 - [ ] `WebViewDM.js` 구현
 - [ ] `notifications.js` 구현
