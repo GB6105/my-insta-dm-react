@@ -40,45 +40,7 @@ jobs:
         working-directory: my-insta-dm
         run: npx expo prebuild --platform ios --clean
 
-      # 4-1. expo-task-manager Swift 파일 패치
-      # 문제: npm 패키지의 findAppUrl()이 String?을 반환하지만 Pod는 String을 요구
-      # 수정: public func findAppUrl() -> String { ... ?? "" }
-      - name: Patch expo-task-manager Swift file
-        working-directory: my-insta-dm
-        run: |
-          SWIFT_FILE="node_modules/expo-task-manager/ios/TaskManagerModule.swift"
-          # 패치: findAppUrl() String? → String (setTaskManager withUrl: nonnull 요구)
-          # 프로토콜 미충족의 근본 원인 — String? 타입 때문에 메서드 바디 컴파일 실패
-          sed -i '' \
-            's/private func findAppUrl() -> String?/public func findAppUrl() -> String/' \
-            "$SWIFT_FILE"
-          sed -i '' \
-            's/return appContext?.constants?.constants()\["experienceUrl"\] as? String$/return appContext?.constants?.constants()["experienceUrl"] as? String ?? ""/' \
-            "$SWIFT_FILE"
-          echo "✅ TaskManagerModule.swift 패치 완료"
-          grep -n "findAppUrl" "$SWIFT_FILE"
-
-      # 5. Podfile 패치 — 모든 Pod에 Swift 5 강제 설정 (Xcode 16 Swift 6 컴파일 오류 방지)
-      - name: Patch Podfile Swift version
-        working-directory: my-insta-dm/ios
-        run: |
-          ruby - << 'RUBY'
-          content = File.read('Podfile')
-          patch = <<~PATCH
-
-            # Swift 5 강제 설정 (Xcode 16 호환)
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['SWIFT_VERSION'] = '5.0'
-              end
-            end
-          PATCH
-          content = content.sub(/^(post_install do \|installer\|)/, "\\1#{patch}")
-          File.write('Podfile', content)
-          RUBY
-          echo "✅ Podfile 패치 완료"
-
-      # 6. CocoaPods 설치
+      # 5. CocoaPods 설치
       - name: Install CocoaPods
         working-directory: my-insta-dm/ios
         run: pod install --repo-update
@@ -96,10 +58,11 @@ jobs:
           echo "📁 ios 디렉토리 내용:"
           ls -la
 
-      # 7. 서명 없이 아카이브 빌드 (에러 그대로 노출)
+      # 7. 서명 없이 아카이브 빌드
       - name: Build iOS archive (unsigned)
         working-directory: my-insta-dm
         run: |
+          set -o pipefail
           xcodebuild archive \
             -workspace "ios/${{ steps.xcode.outputs.workspace }}" \
             -scheme "${{ steps.xcode.outputs.scheme }}" \
@@ -109,17 +72,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            SWIFT_VERSION=5 \
-            2>&1 | tee xcodebuild.log || true
-
-          # 실제 컴파일 에러 라인만 추출해서 출력
-          echo "=== 컴파일 에러 ==="
-          grep -E "\.swift:[0-9]+:[0-9]+: error:" xcodebuild.log | head -30 || echo "(에러 없음)"
-
-          # ARCHIVE FAILED 시 종료 코드 1
-          if grep -q "ARCHIVE FAILED" xcodebuild.log; then
-            exit 1
-          fi
+            2>&1 | tee xcodebuild.log | tail -50
 
       # 8. 아카이브 내용 확인 (디버깅용)
       - name: Inspect archive
