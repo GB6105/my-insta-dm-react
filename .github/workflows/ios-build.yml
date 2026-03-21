@@ -1,0 +1,106 @@
+name: iOS Build
+
+on:
+  # main 브랜치 push 시 자동 빌드
+  push:
+    branches: [main]
+    paths:
+      - 'my-insta-dm/**'
+      - '.github/workflows/ios-build.yml'
+  # 수동 실행도 가능
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      # 1. 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Node.js 설정
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: my-insta-dm/package-lock.json
+
+      # 3. 의존성 설치
+      - name: Install dependencies
+        working-directory: my-insta-dm
+        run: npm ci
+
+      # 4. Expo prebuild — iOS 네이티브 프로젝트 생성
+      - name: Expo prebuild
+        working-directory: my-insta-dm
+        run: npx expo prebuild --platform ios --clean
+
+      # 5. CocoaPods 설치
+      - name: Install CocoaPods
+        working-directory: my-insta-dm/ios
+        run: pod install --repo-update
+
+      # 6. xcworkspace / scheme 이름 동적 탐지
+      - name: Detect workspace and scheme
+        id: xcode
+        working-directory: my-insta-dm/ios
+        run: |
+          WORKSPACE=$(ls *.xcworkspace | head -1)
+          SCHEME="${WORKSPACE%.xcworkspace}"
+          echo "workspace=${WORKSPACE}" >> $GITHUB_OUTPUT
+          echo "scheme=${SCHEME}" >> $GITHUB_OUTPUT
+          echo "🔍 workspace: ${WORKSPACE}, scheme: ${SCHEME}"
+
+      # 7. 서명 없이 아카이브 빌드
+      - name: Build iOS archive (unsigned)
+        working-directory: my-insta-dm
+        run: |
+          xcodebuild archive \
+            -workspace "ios/${{ steps.xcode.outputs.workspace }}" \
+            -scheme "${{ steps.xcode.outputs.scheme }}" \
+            -configuration Release \
+            -archivePath ./build/myinstadm.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty || true
+
+      # 8. .xcarchive → .ipa 패키징
+      - name: Package .ipa
+        working-directory: my-insta-dm
+        run: |
+          mkdir -p Payload
+          cp -r build/myinstadm.xcarchive/Products/Applications/*.app Payload/
+          zip -r myinstadm.ipa Payload/
+          echo "✅ .ipa 생성 완료"
+          ls -lh myinstadm.ipa
+
+      # 9. 버전 태그 추출 (app.json)
+      - name: Get version
+        id: version
+        working-directory: my-insta-dm
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          BUILD_NUM=${{ github.run_number }}
+          echo "tag=v${VERSION}-build${BUILD_NUM}" >> $GITHUB_OUTPUT
+          echo "name=v${VERSION} (build ${BUILD_NUM})" >> $GITHUB_OUTPUT
+
+      # 10. GitHub Releases에 .ipa 업로드
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
+          body: |
+            ## 설치 방법
+            1. 아래 `myinstadm.ipa` 다운로드
+            2. iPhone 파일 앱에서 열기 → AltStore로 설치
+            3. AltStore가 없다면 먼저 AltServer로 설치 필요
+
+            ## 변경사항
+            커밋: ${{ github.sha }}
+          files: my-insta-dm/myinstadm.ipa
+          make_latest: true
