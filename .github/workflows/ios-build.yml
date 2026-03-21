@@ -40,7 +40,27 @@ jobs:
         working-directory: my-insta-dm
         run: npx expo prebuild --platform ios --clean
 
-      # 5. CocoaPods 설치
+      # 5. Podfile 패치 — 모든 Pod에 Swift 5 강제 설정 (Xcode 16 Swift 6 컴파일 오류 방지)
+      - name: Patch Podfile Swift version
+        working-directory: my-insta-dm/ios
+        run: |
+          ruby - << 'RUBY'
+          content = File.read('Podfile')
+          patch = <<~PATCH
+
+            # Swift 5 강제 설정 (Xcode 16 호환)
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['SWIFT_VERSION'] = '5.0'
+              end
+            end
+          PATCH
+          content = content.sub(/^(post_install do \|installer\|)/, "\\1#{patch}")
+          File.write('Podfile', content)
+          RUBY
+          echo "✅ Podfile 패치 완료"
+
+      # 6. CocoaPods 설치
       - name: Install CocoaPods
         working-directory: my-insta-dm/ios
         run: pod install --repo-update
