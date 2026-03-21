@@ -47,22 +47,16 @@ jobs:
         working-directory: my-insta-dm
         run: |
           SWIFT_FILE="node_modules/expo-task-manager/ios/TaskManagerModule.swift"
-          # 패치 1: findAppUrl() String? → String (setTaskManager withUrl: nonnull 요구)
+          # 패치: findAppUrl() String? → String (setTaskManager withUrl: nonnull 요구)
+          # 프로토콜 미충족의 근본 원인 — String? 타입 때문에 메서드 바디 컴파일 실패
           sed -i '' \
             's/private func findAppUrl() -> String?/public func findAppUrl() -> String/' \
             "$SWIFT_FILE"
           sed -i '' \
             's/return appContext?.constants?.constants()\["experienceUrl"\] as? String$/return appContext?.constants?.constants()["experienceUrl"] as? String ?? ""/' \
             "$SWIFT_FILE"
-          # 패치 2: hasConsumerOf → hasConsumerOfClass (EXTaskManagerInterface 프로토콜 충족)
-          sed -i '' \
-            's/hasConsumerOf consumerClass/hasConsumerOfClass consumerClass/g' \
-            "$SWIFT_FILE"
-          sed -i '' \
-            's/hasConsumerOf: consumerClass/hasConsumerOfClass: consumerClass/g' \
-            "$SWIFT_FILE"
           echo "✅ TaskManagerModule.swift 패치 완료"
-          grep -n "hasConsumerOf\|findAppUrl" "$SWIFT_FILE"
+          grep -n "findAppUrl" "$SWIFT_FILE"
 
       # 5. Podfile 패치 — 모든 Pod에 Swift 5 강제 설정 (Xcode 16 Swift 6 컴파일 오류 방지)
       - name: Patch Podfile Swift version
