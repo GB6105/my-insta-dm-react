@@ -48,7 +48,7 @@ jobs:
         id: xcode
         working-directory: my-insta-dm/ios
         run: |
-          WORKSPACE=$(ls *.xcworkspace | head -1)
+          WORKSPACE=$(ls -d *.xcworkspace | head -1)
           SCHEME="${WORKSPACE%.xcworkspace}"
           echo "workspace=${WORKSPACE}" >> $GITHUB_OUTPUT
           echo "scheme=${SCHEME}" >> $GITHUB_OUTPUT
