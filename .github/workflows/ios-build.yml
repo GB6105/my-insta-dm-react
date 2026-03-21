@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-latest
     permissions:
       contents: write
 
@@ -72,6 +72,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            SWIFT_VERSION=5 \
             2>&1 | tee xcodebuild.log | tail -50
 
       # 8. 아카이브 내용 확인 (디버깅용)
