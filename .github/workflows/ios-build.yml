@@ -62,7 +62,6 @@ jobs:
       - name: Build iOS archive (unsigned)
         working-directory: my-insta-dm
         run: |
-          set -o pipefail
           xcodebuild archive \
             -workspace "ios/${{ steps.xcode.outputs.workspace }}" \
             -scheme "${{ steps.xcode.outputs.scheme }}" \
@@ -73,7 +72,16 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             SWIFT_VERSION=5 \
-            2>&1 | tee xcodebuild.log | tail -50
+            2>&1 | tee xcodebuild.log || true
+
+          # 실제 컴파일 에러 라인만 추출해서 출력
+          echo "=== 컴파일 에러 ==="
+          grep -E "\.swift:[0-9]+:[0-9]+: error:" xcodebuild.log | head -30 || echo "(에러 없음)"
+
+          # ARCHIVE FAILED 시 종료 코드 1
+          if grep -q "ARCHIVE FAILED" xcodebuild.log; then
+            exit 1
+          fi
 
       # 8. 아카이브 내용 확인 (디버깅용)
       - name: Inspect archive
