@@ -4,7 +4,7 @@
 
 인스타그램 DM만 사용할 수 있는 개인용 iOS 앱.
 릴스·피드 등 집중력을 방해하는 기능을 차단하고 메시지 송수신에만 집중한다.
-앱 스토어 배포 없이 개인 기기에만 설치한다.
+AltStore로 사이드로딩 배포 (본인 + 친구 1명, 각자 계정으로 로그인).
 
 ---
 
@@ -15,9 +15,13 @@
 - **라우팅**: expo-router ~6.0 (파일 기반 라우팅)
 - **WebView**: react-native-webview
 - **알림**: expo-notifications
+- **백그라운드 태스크**: expo-background-fetch, expo-task-manager
+- **쿠키 접근**: @react-native-cookies/cookies
 - **네비게이션**: @react-navigation/native ~7.1
+- **빌드**: EAS Build (클라우드, Mac 불필요)
+- **배포**: AltStore 사이드로딩 (본인 + 친구)
 - **개발 환경**: Windows + VSCode
-- **테스트**: Expo Go (iPhone)
+- **테스트**: Expo Go (iPhone) → 최종은 EAS Build standalone
 
 ---
 
@@ -27,16 +31,17 @@
 my-insta-dm/
 ├── app/
 │   ├── _layout.tsx               # 루트 레이아웃 (expo-router)
-│   └── index.tsx                 # DM 메인 화면 (구현 예정)
+│   └── index.tsx                 # DM 메인 화면
 ├── components/
-│   └── WebViewDM.tsx             # WebView 핵심 컴포넌트 (구현 예정)
+│   └── WebViewDM.tsx             # WebView 핵심 컴포넌트
 ├── utils/
-│   └── notifications.ts          # 푸시 알림 유틸 (구현 예정)
+│   └── notifications.ts          # 푸시 알림 유틸
 ├── constants/
 │   └── theme.ts                  # 테마 상수
 ├── hooks/                        # 커스텀 훅
 ├── assets/images/
 ├── app.json                      # Expo 설정
+├── eas.json                      # EAS Build 설정 (추가 예정)
 ├── tsconfig.json
 └── package.json
 ```
@@ -59,6 +64,7 @@ my-insta-dm/
 - 30초 간격으로 미읽음 수 체크
 - `AppState.currentState === 'background'` 일 때만 알림 발송
 - WebView → RN 데이터 전달은 `window.ReactNativeWebView.postMessage()` 사용
+- **Expo Go에서는 백그라운드 알림 동작 안 함 → EAS Build 필수**
 
 ---
 
@@ -73,6 +79,12 @@ npx expo start --ios
 
 # 린트 검사
 npm run lint
+
+# EAS 로그인
+eas login
+
+# EAS Build로 .ipa 빌드
+eas build --platform ios --profile production
 
 # 프로젝트 보일러플레이트 초기화 (주의: 기존 app/ 내용 삭제)
 npm run reset-project
@@ -103,7 +115,7 @@ npm run reset-project
 
 ## 주요 상수
 
-```javascript
+```typescript
 const DM_URL = 'https://www.instagram.com/direct/inbox/';
 const POLLING_INTERVAL = 30000; // 30초
 ```
@@ -116,7 +128,54 @@ const POLLING_INTERVAL = 30000; // 30초
 - **주석을 충분히** — 각 함수와 훅의 역할을 한국어로 설명
 - **Expo 관리형 워크플로우 유지** — `expo eject` 하지 않음
 - **iOS 전용** — Android 대응 불필요
-- **앱 스토어 배포 없음** — 심사 대응 코드 불필요
+- **앱 스토어 배포 없음** — AltStore 사이드로딩으로 배포
+
+---
+
+## 배포 방식 (AltStore)
+
+### 개요
+- Apple Developer 계정 없이 무료로 iOS 기기에 설치
+- 본인 + 친구 각각 자기 PC에 AltStore 설치 필요
+- 각자 자신의 Apple ID로 서명
+- 7일마다 자동 갱신 (같은 와이파이 환경에서)
+
+### .ipa 배포 흐름
+```
+EAS Build → .ipa 다운로드 → 카톡/드라이브로 전달 → 친구가 AltStore로 설치
+```
+
+### 앱 업데이트 시
+```
+코드 수정 → eas build → 새 .ipa 친구에게 전달 → AltStore로 재설치
+```
+
+---
+
+## EAS Build 설정 (eas.json) — 추가 예정
+
+```json
+{
+  "cli": {
+    "version": ">= 5.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "production": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release"
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -129,12 +188,18 @@ const POLLING_INTERVAL = 30000; // 30초
 - [x] `WebViewDM.tsx` 구현 (WebView + URL 차단 + JS 주입 + postMessage)
 - [x] `notifications.ts` 구현 (권한 요청 + 30초 폴링 + 로컬 알림)
 - [x] `app/index.tsx` 구현 (SafeAreaView + AppState + 전체 연결)
-- [ ] iPhone 테스트
+- [x] Expo Go로 iPhone 테스트
+- [ ] `eas.json` 생성 및 EAS Build 설정
+- [ ] EAS 계정 생성 및 로그인 (`eas login`)
+- [ ] EAS Build로 .ipa 빌드 (`eas build --platform ios --profile production`)
+- [ ] 본인 기기 AltStore 설치 및 .ipa 사이드로딩 테스트
+- [ ] 친구 기기 AltStore 설치 및 .ipa 전달
 
 ---
 
 ## 알려진 한계
 
 - 인스타그램 웹 UI 업데이트 시 CSS selector 수정 필요할 수 있음
-- 푸시 알림은 폴링 방식이라 최대 30초 지연 있음
-- 개인용이므로 멀티 계정 미지원
+- 푸시 알림은 폴링 방식이라 최대 30초 지연 있음 (Expo Go에서 백그라운드 알림 미동작)
+- AltStore 갱신은 각자 PC + Apple ID 필요
+- 개인용이므로 멀티 계정 미지원 (각자 기기에서 각자 계정 로그인)
