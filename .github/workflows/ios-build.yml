@@ -1,13 +1,11 @@
 name: iOS Build
 
 on:
-  # main 브랜치 push 시 자동 빌드
   push:
     branches: [main]
     paths:
       - 'my-insta-dm/**'
       - '.github/workflows/ios-build.yml'
-  # 수동 실행도 가능
   workflow_dispatch:
 
 env:
@@ -55,11 +53,14 @@ jobs:
           echo "workspace=${WORKSPACE}" >> $GITHUB_OUTPUT
           echo "scheme=${SCHEME}" >> $GITHUB_OUTPUT
           echo "🔍 workspace: ${WORKSPACE}, scheme: ${SCHEME}"
+          echo "📁 ios 디렉토리 내용:"
+          ls -la
 
-      # 7. 서명 없이 아카이브 빌드
+      # 7. 서명 없이 아카이브 빌드 (에러 그대로 노출)
       - name: Build iOS archive (unsigned)
         working-directory: my-insta-dm
         run: |
+          set -o pipefail
           xcodebuild archive \
             -workspace "ios/${{ steps.xcode.outputs.workspace }}" \
             -scheme "${{ steps.xcode.outputs.scheme }}" \
@@ -69,19 +70,28 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            | xcpretty || true
+            2>&1 | tee xcodebuild.log | tail -50
 
-      # 8. .xcarchive → .ipa 패키징
+      # 8. 아카이브 내용 확인 (디버깅용)
+      - name: Inspect archive
+        working-directory: my-insta-dm
+        run: |
+          echo "📁 build/ 내용:"
+          find build/ -type f -o -type d | head -30
+
+      # 9. .xcarchive → .ipa 패키징
       - name: Package .ipa
         working-directory: my-insta-dm
         run: |
+          APP_PATH=$(find build/myinstadm.xcarchive/Products/Applications -name "*.app" | head -1)
+          echo "📦 앱 경로: ${APP_PATH}"
           mkdir -p Payload
-          cp -r build/myinstadm.xcarchive/Products/Applications/*.app Payload/
+          cp -r "${APP_PATH}" Payload/
           zip -r myinstadm.ipa Payload/
           echo "✅ .ipa 생성 완료"
           ls -lh myinstadm.ipa
 
-      # 9. 버전 태그 추출 (app.json)
+      # 10. 버전 태그 추출
       - name: Get version
         id: version
         working-directory: my-insta-dm
@@ -91,7 +101,7 @@ jobs:
           echo "tag=v${VERSION}-build${BUILD_NUM}" >> $GITHUB_OUTPUT
           echo "name=v${VERSION} (build ${BUILD_NUM})" >> $GITHUB_OUTPUT
 
-      # 10. GitHub Releases에 .ipa 업로드
+      # 11. GitHub Releases에 .ipa 업로드
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
@@ -107,3 +117,11 @@ jobs:
             커밋: ${{ github.sha }}
           files: my-insta-dm/myinstadm.ipa
           make_latest: true
+
+      # 12. 빌드 실패 시 xcodebuild 로그 업로드
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: my-insta-dm/xcodebuild.log
