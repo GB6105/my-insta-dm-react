@@ -50,16 +50,17 @@ export default function DMScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    // edges={['top']} — 다이나믹 아일랜드 영역만 SafeArea 적용, 하단은 엣지투엣지
+    <SafeAreaView style={styles.container} edges={['top']}>
       <WebViewDM webViewRef={webViewRef} onUnreadCountChange={handleUnreadCountChange} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // 전체 화면 — 노치/홈바 SafeAreaView로 자동 대응
+  // 다이나믹 아일랜드 위쪽은 흰색 여백, 하단은 엣지투엣지
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
   },
 });
