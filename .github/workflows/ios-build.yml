@@ -120,7 +120,38 @@ jobs:
           files: my-insta-dm/myinstadm.ipa
           make_latest: true
 
-      # 12. 빌드 실패 시 xcodebuild 로그 업로드
+      # 12. AltStore source.json 갱신
+      - name: Update AltStore source.json
+        run: |
+          VERSION=$(node -p "require('./my-insta-dm/app.json').expo.version")
+          BUILD_NUM=${{ github.run_number }}
+          TAG="v${VERSION}-build${BUILD_NUM}"
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%S+00:00")
+          SIZE=$(wc -c < my-insta-dm/myinstadm.ipa | xargs)
+          DOWNLOAD_URL="https://github.com/GB6105/my-insta-dm-react/releases/download/${TAG}/myinstadm.ipa"
+
+          jq --arg version "$VERSION" \
+             --arg date "$DATE" \
+             --arg url "$DOWNLOAD_URL" \
+             --arg desc "Build ${BUILD_NUM}" \
+             --argjson size "$SIZE" \
+             '.apps[0].versions = [{"version": $version, "date": $date, "localizedDescription": $desc, "downloadURL": $url, "size": $size}] + .apps[0].versions' \
+             altstore-source.json > altstore-source.tmp.json
+          mv altstore-source.tmp.json altstore-source.json
+          echo "✅ source.json 갱신:"
+          jq '.apps[0].versions[0]' altstore-source.json
+
+      # 13. 갱신된 source.json 커밋 & 푸시
+      - name: Commit and push source.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add altstore-source.json
+          git commit -m "chore: AltStore source.json 갱신 (build ${{ github.run_number }}) [skip ci]"
+          git push origin main
+
+      # 14. 빌드 실패 시 xcodebuild 로그 업로드
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
