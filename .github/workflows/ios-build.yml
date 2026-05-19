@@ -18,9 +18,11 @@ jobs:
       contents: write
 
     steps:
-      # 1. 코드 체크아웃
+      # 1. 코드 체크아웃 (token 명시 — 이후 git push 인증에 자동 사용)
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # 2. Node.js 설정
       - name: Setup Node.js
@@ -148,6 +150,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
           git add altstore-source.json
+          # 변경사항이 없으면 커밋 스킵 (정상 종료)
+          git diff --staged --quiet && echo "변경사항 없음, 스킵" && exit 0
           git commit -m "chore: AltStore source.json 갱신 (build ${{ github.run_number }}) [skip ci]"
           git push origin main
 
